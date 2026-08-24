@@ -249,40 +249,29 @@ label {
 
 
 /* =========================================================
-   FIELD MEANINGS
+   REQUIRED FIELD HELP ICONS
    ========================================================= */
 
-.field-meanings-list {
-    display: flex;
-    flex-direction: column;
-    gap: 9px;
-    margin-top: 10px;
+.required-field-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
 }
 
-.field-meaning {
-    padding: 10px 14px;
-    border-radius: 9px;
-    background: #1f2937;
-    line-height: 1.5;
-    font-size: 17px;
-}
-
-.field-meaning .info-icon {
-    display: inline-block;
-    min-width: auto;
-    margin-right: 7px;
-    font-size: 18px;
-}
-
-.field-meaning strong {
-    display: inline-block;
-    min-width: 155px;
-    margin-right: 10px;
-    font-size: 17px;
-}
-
-.field-meaning .meaning-text {
-    font-size: 17px;
+.required-field-info {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border: 1px solid #9ca3af;
+    border-radius: 50%;
+    color: #d1d5db;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: help;
+    flex-shrink: 0;
 }
 
 
@@ -294,19 +283,6 @@ label {
 
     .required-field {
         min-width: 100%;
-    }
-
-    .field-meaning strong {
-        display: inline-block;
-        margin-bottom: 3px;
-    }
-
-    .field-meaning .info-icon {
-        display: inline-block;
-    }
-
-    .field-meaning .meaning-text {
-        font-size: 16px;
     }
 }
 
@@ -341,8 +317,8 @@ label {
 
     .mobile-back-button button {
         width: auto !important;
-        min-width: 150px !important;
-        min-height: 45px !important;
+        min-width: 120px !important;
+        min-height: 44px !important;
         font-size: 16px !important;
     }
 }
@@ -1630,12 +1606,17 @@ st.markdown(
 # =========================================================
 
 # IMPORTANT:
-# None = show ONLY the two prediction choices.
+# The prediction mode is stored in the URL so the browser's
+# Back / Forward buttons can navigate between the home screen
+# and the selected prediction screen on laptop/desktop.
 #
-# We do NOT start with single prediction.
+# Mobile users also get an in-app Back button.
 
-if "prediction_mode" not in st.session_state:
+url_mode = st.query_params.get("mode")
 
+if url_mode in ("single", "batch"):
+    st.session_state.prediction_mode = url_mode
+else:
     st.session_state.prediction_mode = None
 
 
@@ -1704,8 +1685,8 @@ if st.session_state.prediction_mode is None:
 
         ):
 
+            st.query_params["mode"] = "single"
             st.session_state.prediction_mode = "single"
-
             st.rerun()
 
 
@@ -1738,8 +1719,8 @@ if st.session_state.prediction_mode is None:
 
         ):
 
+            st.query_params["mode"] = "batch"
             st.session_state.prediction_mode = "batch"
-
             st.rerun()
 
 
@@ -1757,24 +1738,24 @@ elif st.session_state.prediction_mode == "single":
 
 
     # =====================================================
-    # MOBILE BACK BUTTON ONLY
+    # MOBILE BACK BUTTON
     # =====================================================
+    # Hidden on laptop/desktop. On mobile it returns to the
+    # prediction-type screen without relying on the browser
+    # navigation controls.
 
     st.markdown(
         '<div class="mobile-back-button">',
         unsafe_allow_html=True
     )
 
-
     if st.button(
         "← Back",
         key="mobile_back_single"
     ):
-
+        st.query_params.clear()
         st.session_state.prediction_mode = None
-
         st.rerun()
-
 
     st.markdown(
         "</div>",
@@ -2645,14 +2626,19 @@ elif st.session_state.prediction_mode == "single":
 elif st.session_state.prediction_mode == "batch":
 
     # =====================================================
-    # MOBILE BACK BUTTON ONLY
+    # MOBILE BACK BUTTON
     # =====================================================
+    # Hidden on laptop/desktop. On mobile it returns to the
+    # prediction-type screen without relying on the browser
+    # navigation controls.
+
     st.markdown(
         '<div class="mobile-back-button">',
         unsafe_allow_html=True
     )
 
     if st.button("← Back", key="mobile_back_batch"):
+        st.query_params.clear()
         st.session_state.prediction_mode = None
         st.rerun()
 
@@ -2682,57 +2668,52 @@ elif st.session_state.prediction_mode == "batch":
     with st.expander("📋 Required columns & field meanings"):
         st.write("**Required columns:**")
 
+        # Only the fields that already have meanings in FIELD_HELP
+        # receive the small information icon.
         required_fields_html = ""
+
         for i in range(0, len(BATCH_REQUIRED_COLUMNS), 3):
             row = BATCH_REQUIRED_COLUMNS[i:i + 3]
-            required_fields_html += (
-                '<div class="required-fields-row">'
-                + "".join(
-                    f'<span class="required-field">• {field}</span>'
-                    for field in row
+
+            required_fields_html += '<div class="required-fields-row">'
+
+            for field in row:
+                if field in FIELD_HELP:
+                    meaning = (
+                        FIELD_HELP[field]
+                        .replace("&", "&amp;")
+                        .replace('"', "&quot;")
+                        .replace("<", "&lt;")
+                        .replace(">", "&gt;")
+                    )
+
+                    field_html = (
+                        f'<span class="required-field-content">'
+                        f'{field}'
+                        f'<span class="required-field-info" '
+                        f'title="{meaning}">ⓘ</span>'
+                        f'</span>'
+                    )
+                else:
+                    field_html = field
+
+                required_fields_html += (
+                    f'<span class="required-field">'
+                    f'• {field_html}'
+                    f'</span>'
                 )
-                + "</div>"
-            )
+
+            required_fields_html += '</div>'
 
         st.markdown(
-            f'<div class="required-fields-list">{required_fields_html}</div>',
+            f'<div class="required-fields-list">'
+            f'{required_fields_html}'
+            f'</div>',
             unsafe_allow_html=True
         )
 
-        st.write("**Field meanings:**")
-
-        meaning_items = [
-            ("Dependents", FIELD_HELP["Dependents"]),
-            ("tenure", FIELD_HELP["tenure"]),
-            ("PhoneService", FIELD_HELP["PhoneService"]),
-            ("MultipleLines", FIELD_HELP["MultipleLines"]),
-            ("InternetService", FIELD_HELP["InternetService"]),
-            ("OnlineSecurity", FIELD_HELP["OnlineSecurity"]),
-            ("OnlineBackup", FIELD_HELP["OnlineBackup"]),
-            ("DeviceProtection", FIELD_HELP["DeviceProtection"]),
-            ("TechSupport", FIELD_HELP["TechSupport"]),
-            ("StreamingTV", FIELD_HELP["StreamingTV"]),
-            ("StreamingMovies", FIELD_HELP["StreamingMovies"]),
-            ("Contract", FIELD_HELP["Contract"]),
-            ("PaperlessBilling", FIELD_HELP["PaperlessBilling"]),
-            ("PaymentMethod", FIELD_HELP["PaymentMethod"]),
-            ("MonthlyCharges", FIELD_HELP["MonthlyCharges"]),
-            ("TotalCharges", FIELD_HELP["TotalCharges"]),
-        ]
-
-        meaning_html = ""
-        for field, meaning in meaning_items:
-            meaning_html += (
-                f'<div class="field-meaning">'
-                f'<span class="info-icon">ⓘ</span>'
-                f'<strong>{field}</strong>'
-                f'<span class="meaning-text">{meaning}</span>'
-                f'</div>'
-            )
-
-        st.markdown(
-            f'<div class="field-meanings-list">{meaning_html}</div>',
-            unsafe_allow_html=True
+        st.caption(
+            "Hover over the ⓘ symbol beside a field to see its meaning."
         )
 
     # =====================================================
