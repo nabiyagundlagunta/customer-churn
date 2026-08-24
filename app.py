@@ -270,7 +270,7 @@ label {
     font-size: 12px;
     font-weight: 700;
     line-height: 1;
-    cursor: help;
+    cursor: default;
     flex-shrink: 0;
 }
 
