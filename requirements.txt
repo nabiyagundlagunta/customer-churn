@@ -4,3 +4,4 @@ openpyxl
 joblib
 reportlab
 scikit-learn==1.6.1
+streamlit>=1.30.0
