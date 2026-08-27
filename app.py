@@ -276,6 +276,86 @@ label {
 
 
 /* =========================================================
+   HAMBURGER NAVIGATION
+   ========================================================= */
+
+/* Closed menu: the open button is fixed inside the Streamlit
+   content area, below the top toolbar. */
+.nav-hamburger-wrap {
+    position: fixed !important;
+    top: 218px !important;
+    left: 18px !important;
+    z-index: 4000 !important;
+    width: 52px !important;
+    height: 52px !important;
+}
+
+.nav-hamburger-wrap .stButton,
+.nav-hamburger-wrap .stButton > button {
+    width: 52px !important;
+    height: 52px !important;
+    min-height: 52px !important;
+}
+
+.nav-hamburger-wrap .stButton > button,
+.st-key-hamburger_close button {
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 12px !important;
+    font-size: 28px !important;
+    line-height: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Open menu. */
+.st-key-nav_panel {
+    position: fixed !important;
+    top: -200px !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 290px !important;
+    z-index: 3000 !important;
+    padding: 288px 18px 24px 18px !important;
+    background: #111827 !important;
+    border-right: 1px solid #374151 !important;
+    box-shadow: 10px 0 30px rgba(0,0,0,.25) !important;
+    overflow-y: auto !important;
+}
+
+/* CLOSE button is a real Streamlit button inside the panel. */
+.st-key-hamburger_close {
+    position: absolute !important;
+    top: 218px !important;
+    left: 18px !important;
+    width: 52px !important;
+    height: 52px !important;
+    z-index: 5000 !important;
+}
+
+.st-key-hamburger_close button {
+    width: 52px !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    position: relative !important;
+    z-index: 5001 !important;
+}
+
+.nav-panel-title { font-size: 22px; font-weight: 700; margin: 0 0 18px 8px; }
+.nav-panel-note { color: #9ca3af; font-size: 14px; margin: 18px 8px 0 8px; line-height: 1.5; }
+.gauge-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin-top: 25px; }
+.gauge-card { background: #1f2937; border: 1px solid #374151; border-radius: 18px; padding: 18px 12px 20px; text-align: center; }
+.gauge-title { font-size: 17px; font-weight: 650; min-height: 45px; display: flex; align-items: center; justify-content: center; }
+.gauge-svg { width: 100%; max-width: 240px; height: auto; display: block; margin: 4px auto -8px; }
+.gauge-value { font-size: 30px; font-weight: 750; margin-top: -2px; }
+.gauge-scale { color: #9ca3af; font-size: 13px; }
+@media (max-width: 900px) { .gauge-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .gauge-row { grid-template-columns: 1fr; } }
+
+/* =========================================================
    MOBILE
    ========================================================= */
 
@@ -1602,23 +1682,138 @@ st.markdown(
 
 
 # =========================================================
+# SINGLE-PAGE NAVIGATION
+# =========================================================
+if "app_page" not in st.session_state:
+    st.session_state.app_page = "prediction"
+if "prediction_mode" not in st.session_state:
+    st.session_state.prediction_mode = None
+if "nav_open" not in st.session_state:
+    st.session_state.nav_open = False
+
+def go_prediction_center():
+    st.session_state.app_page = "prediction"
+    st.session_state.prediction_mode = None
+    st.session_state.nav_open = False
+
+def go_about_model():
+    st.session_state.app_page = "about"
+    st.session_state.prediction_mode = None
+    st.session_state.nav_open = False
+
+# ---------------------------------------------------------
+# HAMBURGER / NAVIGATION
+# ---------------------------------------------------------
+def open_navigation():
+    st.session_state.nav_open = True
+
+def close_navigation():
+    st.session_state.nav_open = False
+
+if not st.session_state.nav_open:
+    # OPEN button
+    st.markdown('<div class="nav-hamburger-wrap">', unsafe_allow_html=True)
+    st.button(
+        "☰",
+        key="hamburger_open",
+        help="Open navigation",
+        on_click=open_navigation
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
+
+else:
+    # Shift the application content to the right while the menu is open.
+    # The sidebar remains fixed on the left; the page content moves with it.
+    st.markdown(
+        '''
+        <style>
+        /* =====================================================
+           OPEN MENU -> PUSH PAGE CONTENT RIGHT
+           ===================================================== */
+
+        /* IMPORTANT:
+           Do NOT transform the main block. The navigation panel is
+           rendered inside Streamlit's main block, so transforming
+           the whole block also moved the menu to the right.
+
+           Instead, reserve 290px on the LEFT for the menu and let
+           the menu itself stay fixed at x=0. */
+        [data-testid="stMainBlockContainer"] {
+            margin-left: 290px !important;
+            width: calc(100% - 290px) !important;
+            transition: margin-left 0.25s ease-in-out,
+                        width 0.25s ease-in-out !important;
+        }
+
+        /* The remaining page area starts immediately after
+           the 290px navigation panel. */
+        [data-testid="stMainBlockContainer"] > div {
+            max-width: none !important;
+        }
+
+        /* Keep the actual navigation panel attached to the
+           left edge of the browser viewport. */
+        .st-key-nav_panel {
+            position: fixed !important;
+            left: 0 !important;
+            top: -200px !important;
+            bottom: 0 !important;
+            width: 290px !important;
+            margin: 0 !important;
+            transform: none !important;
+        }
+        </style>
+        ''',
+        unsafe_allow_html=True
+    )
+
+    # The CLOSE button is physically INSIDE the open panel.
+    with st.container(key="nav_panel"):
+        st.button(
+            "☰",
+            key="hamburger_close",
+            help="Close navigation",
+            on_click=close_navigation
+        )
+
+        st.button(
+            "Prediction Center",
+            key="nav_prediction",
+            on_click=go_prediction_center,
+            use_container_width=True
+        )
+
+        st.button(
+            "About Model",
+            key="nav_about",
+            on_click=go_about_model,
+            use_container_width=True
+        )
+
+if st.session_state.app_page == "about":
+    st.markdown('<div class="section-title">📊 About Model</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">Logistic Regression model performance</div>', unsafe_allow_html=True)
+    metrics = [("Accuracy", 80.55), ("ROC-AUC", 84.21), ("Recall", 56.0), ("F1-Score", 60.0)]
+    gauge_html = '<div class="gauge-row">'
+    for label, value in metrics:
+        dash = 251.327 * value / 100.0
+        gauge_html += f"""<div class="gauge-card">
+<div class="gauge-title">{label}</div>
+<svg class="gauge-svg" viewBox="0 0 200 120" aria-label="{label} {value:.2f}%">
+<path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="#374151" stroke-width="14" stroke-linecap="round" pathLength="251.327"/>
+<path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="#60a5fa" stroke-width="14" stroke-linecap="round" pathLength="251.327" stroke-dasharray="{dash:.3f} 251.327"/>
+<text x="20" y="116" fill="#9ca3af" font-size="10">0</text><text x="173" y="116" fill="#9ca3af" font-size="10">100</text>
+</svg>
+<div class="gauge-value">{value:.2f}%</div><div class="gauge-scale">0 — 100%</div></div>"""
+    gauge_html += '</div>'
+    st.markdown(gauge_html, unsafe_allow_html=True)
+    st.markdown("### 🏆 Logistic Regression")
+    st.table(pd.DataFrame([{"Model":"🏆 Logistic Regression","Accuracy":"80.55%","ROC-AUC":"84.21%","Recall":"56%","F1-Score":"60%"}]))
+    st.stop()
+
+# =========================================================
 # PREDICTION MODE
 # =========================================================
-
-# IMPORTANT:
-# The prediction mode is stored in the URL so the browser's
-# Back / Forward buttons can navigate between the home screen
-# and the selected prediction screen on laptop/desktop.
-#
-# Mobile users also get an in-app Back button.
-
-url_mode = st.query_params.get("mode")
-
-if url_mode in ("single", "batch"):
-    st.session_state.prediction_mode = url_mode
-else:
-    st.session_state.prediction_mode = None
-
 
 # =========================================================
 # INITIAL SCREEN
@@ -1685,7 +1880,7 @@ if st.session_state.prediction_mode is None:
 
         ):
 
-            st.query_params["mode"] = "single"
+            st.session_state.app_page = "prediction"
             st.session_state.prediction_mode = "single"
             st.rerun()
 
@@ -1719,7 +1914,7 @@ if st.session_state.prediction_mode is None:
 
         ):
 
-            st.query_params["mode"] = "batch"
+            st.session_state.app_page = "prediction"
             st.session_state.prediction_mode = "batch"
             st.rerun()
 
@@ -1753,7 +1948,7 @@ elif st.session_state.prediction_mode == "single":
         "← Back",
         key="mobile_back_single"
     ):
-        st.query_params.clear()
+        st.session_state.app_page = "prediction"
         st.session_state.prediction_mode = None
         st.rerun()
 
@@ -2638,7 +2833,7 @@ elif st.session_state.prediction_mode == "batch":
     )
 
     if st.button("← Back", key="mobile_back_batch"):
-        st.query_params.clear()
+        st.session_state.app_page = "prediction"
         st.session_state.prediction_mode = None
         st.rerun()
 
@@ -2935,4 +3130,3 @@ elif st.session_state.prediction_mode == "batch":
         except Exception as e:
             st.error("❌ Unable to process the uploaded file.")
             st.error(f"Error: {e}")
-
