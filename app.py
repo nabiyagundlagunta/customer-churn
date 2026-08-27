@@ -2,6 +2,11 @@ import streamlit as st
 import streamlit.components.v1 as components
 import joblib
 import pandas as pd
+import base64
+import json
+import zlib
+import os
+import uuid
 
 from io import BytesIO
 
@@ -163,6 +168,95 @@ label {
 
 
 /* =========================================================
+   MODEL ONLINE BADGE
+   ========================================================= */
+.model-online-badge {
+    position: fixed !important;
+    top: 20px !important;
+    right: 24px !important;
+    z-index: 1000002 !important;
+    display: inline-flex !important;
+    align-items: center;
+    gap: 9px;
+    margin: 0 !important;
+    padding: 8px 15px;
+    border: 1px solid rgba(34, 197, 94, 0.35);
+    border-radius: 999px;
+    background: rgba(17, 24, 39, 0.96);
+    color: #bbf7d0;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .2px;
+    white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(0,0,0,.18);
+}
+.model-online-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 0 4px rgba(34,197,94,.12);
+    flex-shrink: 0;
+}
+
+/* =========================================================
+   PAGE SCROLL FIX
+   ========================================================= */
+html, body {
+    min-height: 100% !important;
+    height: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+}
+
+[data-testid="stAppViewContainer"] {
+    min-height: 100vh !important;
+    height: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+}
+
+[data-testid="stMain"] {
+    min-height: 100vh !important;
+    height: auto !important;
+    overflow: visible !important;
+}
+
+[data-testid="stMainBlockContainer"] {
+    min-height: 100vh !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding-bottom: 80px !important;
+}
+
+[data-testid="stMainBlockContainer"] > div {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+}
+
+/* =========================================================
+   SHARE RESULT CARD
+   ========================================================= */
+.share-card {
+    margin-top: 24px;
+    padding: 18px 20px;
+    border: 1px solid #374151;
+    border-radius: 16px;
+    background: #111827;
+}
+.share-title {
+    font-size: 19px;
+    font-weight: 750;
+    margin-bottom: 5px;
+}
+.share-subtitle {
+    color: #9ca3af;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+/* =========================================================
    MOBILE BACK BUTTON
    ========================================================= */
 
@@ -287,11 +381,16 @@ label {
    These rules explicitly allow the custom panel/button to extend
    into the blank top area of the app.
 */
-[data-testid="stAppViewContainer"],
 [data-testid="stMain"],
 [data-testid="stMainBlockContainer"],
 [data-testid="stMainBlockContainer"] > div {
     overflow: visible !important;
+}
+
+/* Keep the actual Streamlit app container as the vertical scroll owner. */
+[data-testid="stAppViewContainer"] {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
 }
 
 /* Closed menu: open button.
@@ -424,6 +523,13 @@ label {
    ========================================================= */
 
 @media (max-width: 768px) {
+
+    .model-online-badge {
+        top: 14px !important;
+        right: 14px !important;
+        font-size: 13px;
+        padding: 7px 12px;
+    }
 
     .main-title {
         font-size: 31px;
@@ -1704,6 +1810,203 @@ def create_pdf(
 
 
 # =========================================================
+# ONLINE BADGE & SHARE-LINK HELPERS
+# =========================================================
+def render_model_online_badge():
+    st.markdown(
+        """<div class="model-online-badge"><span class="model-online-dot"></span>Model Online</div>""",
+        unsafe_allow_html=True
+    )
+
+
+def encode_share_payload(payload):
+    raw = json.dumps(payload, separators=(",", ":"), default=str).encode("utf-8")
+    return base64.urlsafe_b64encode(zlib.compress(raw, 9)).decode("ascii")
+
+
+SHARE_STORE_FILE = ".customer_retention_share_store.json"
+
+
+def _read_share_store():
+    try:
+        if not os.path.exists(SHARE_STORE_FILE):
+            return {}
+        with open(SHARE_STORE_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _write_share_store(store):
+    temp_file = SHARE_STORE_FILE + ".tmp"
+    with open(temp_file, "w", encoding="utf-8") as f:
+        json.dump(store, f, separators=(",", ":"), default=str)
+    os.replace(temp_file, SHARE_STORE_FILE)
+
+
+def create_share_id(payload):
+    share_id = uuid.uuid4().hex
+    store = _read_share_store()
+    store[share_id] = payload
+    _write_share_store(store)
+    return share_id
+
+
+def load_share_id(share_id):
+    return _read_share_store().get(share_id)
+
+
+def decode_share_payload(encoded):
+    try:
+        raw = zlib.decompress(base64.urlsafe_b64decode(encoded.encode("ascii")))
+        return json.loads(raw.decode("utf-8"))
+    except Exception:
+        return None
+
+
+def render_copy_link_button(kind, payload, key, share_id=None, button_label="🔗 Share as Link"):
+    """Render a copy-only share control. The actual URL is never displayed."""
+    if share_id:
+        parameter_name = "share_id"
+        parameter_value = share_id
+    else:
+        parameter_name = "share"
+        parameter_value = encode_share_payload(payload)
+
+    value_js = json.dumps(parameter_value)
+    parameter_js = json.dumps(parameter_name)
+    button_js = json.dumps(button_label)
+
+    html = f"""
+    <div class="share-card">
+      <button id="copy-{key}" style="width:100%;padding:12px 16px;border:0;border-radius:10px;background:#2563eb;color:white;font-size:16px;font-weight:700;cursor:pointer;">{button_label}</button>
+      <div id="toast-{key}" style="position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(20px);background:#166534;color:white;padding:12px 20px;border-radius:10px;font-size:15px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:all .25s ease;z-index:999999;">✓ Link copied to clipboard</div>
+    </div>
+    <script>
+    const parameterName = {parameter_js};
+    const parameterValue = {value_js};
+    const kind = {json.dumps(kind)};
+    const button = document.getElementById('copy-{key}');
+    const toast = document.getElementById('toast-{key}');
+    button.addEventListener('click', async () => {{
+      try {{
+        const current = new URL(window.parent.location.href);
+        current.search = '';
+        current.searchParams.set(parameterName, parameterValue);
+        current.searchParams.set('view', kind);
+        const shareUrl = current.toString();
+        await navigator.clipboard.writeText(shareUrl);
+
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+        button.textContent = '✓ Link Copied';
+
+        setTimeout(() => {{
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateX(-50%) translateY(20px)';
+          button.textContent = {button_js};
+        }}, 1800);
+      }} catch (e) {{
+        toast.textContent = 'Copy failed — allow clipboard access in your browser.';
+        toast.style.background = '#991b1b';
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+        setTimeout(() => {{
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateX(-50%) translateY(20px)';
+          toast.textContent = '✓ Link copied to clipboard';
+          toast.style.background = '#166534';
+        }}, 2200);
+      }}
+    }});
+    </script>
+    """
+    components.html(html, height=80, scrolling=False)
+
+
+def render_shared_single(payload):
+    render_model_online_badge()
+    st.markdown("<div class='section-title'>🔗 Shared Customer Prediction</div>", unsafe_allow_html=True)
+    st.caption("This result was opened from a shared prediction link.")
+
+    churn_probability = float(payload.get("churn_probability", 0))
+    risk_level = payload.get("risk_level", "UNKNOWN")
+    prediction_text = payload.get("prediction_text", "Unknown")
+    retention_priority = payload.get("retention_priority", "LOW")
+    risk_message = payload.get("risk_message", "")
+    reasons = payload.get("reasons", [])
+    actions = payload.get("actions", [])
+
+    col1, col2, col3, col4 = st.columns(4)
+    with col1: st.metric("Churn Probability", f"{churn_probability * 100:.1f}%")
+    with col2:
+        if risk_level == "HIGH": st.error(f"🔴 {risk_level} RISK")
+        elif risk_level == "MEDIUM": st.warning(f"🟠 {risk_level} RISK")
+        else: st.success(f"🟢 {risk_level} RISK")
+    with col3: st.metric("Prediction", prediction_text)
+    with col4:
+        icon = {"CRITICAL":"🔴", "HIGH":"🟠", "MEDIUM":"🟡", "LOW":"🟢"}.get(retention_priority, "⚪")
+        st.metric("Retention Priority", f"{icon} {retention_priority}")
+
+    if risk_message: st.info(risk_message)
+    st.markdown("### 🔎 Why this customer is at risk")
+    for reason in reasons: st.write(f"• {reason}")
+    st.markdown("### 🎯 Recommended Retention Actions")
+    for number, action in enumerate(actions, start=1): st.write(f"**{number}.** {action}")
+
+
+def render_shared_batch(payload):
+    render_model_online_badge()
+    st.markdown("<div class='section-title'>🔗 Shared Batch Prediction</div>", unsafe_allow_html=True)
+    st.caption("This result was opened from a shared batch prediction link.")
+
+    result_df = pd.DataFrame(payload.get("result", []))
+    if result_df.empty:
+        st.warning("The shared batch result contains no rows.")
+        return
+
+    churners_df = result_df[result_df.get("Churn Prediction", pd.Series(dtype=str)) == "Likely to Churn"].copy()
+    total_customers = len(result_df)
+    churn_count = len(churners_df)
+    churn_rate = (churn_count / total_customers) * 100 if total_customers else 0
+    high_risk_count = int((result_df["Risk Level"] == "HIGH").sum()) if "Risk Level" in result_df else 0
+
+    col1, col2, col3, col4 = st.columns(4)
+    with col1: st.metric("Total Customers", f"{total_customers:,}")
+    with col2: st.metric("Likely to Churn", f"{churn_count:,}")
+    with col3: st.metric("High Risk", f"{high_risk_count:,}")
+    with col4: st.metric("Churn Rate", f"{churn_rate:.1f}%")
+
+    customer_id_column = get_customer_id_column(result_df)
+    display_columns = [customer_id_column, "Churn Probability", "Churn Prediction", "Risk Level", "High-Value Customer", "Retention Priority", "Risk Factors", "Recommended Action"]
+    display_columns = [c for c in display_columns if c is not None and c in result_df.columns]
+    unified = result_df[display_columns].copy()
+    if "High-Value Customer" in unified.columns:
+        unified["High-Value Customer"] = unified["High-Value Customer"].map({True:"Yes", False:"No"})
+    st.markdown("### 👥 Customer Retention Analysis")
+    st.dataframe(unified, use_container_width=True, hide_index=True)
+
+
+
+
+def load_shared_result():
+    view = st.query_params.get("view")
+    if view not in {"single", "batch"}:
+        return None, None
+
+    share_id = st.query_params.get("share_id")
+    if share_id:
+        return view, load_share_id(share_id)
+
+    # Backward compatibility for links created by the previous version.
+    encoded = st.query_params.get("share")
+    if not encoded:
+        return None, None
+    return view, decode_share_payload(encoded)
+
+
+# =========================================================
 # TITLE
 # =========================================================
 
@@ -1743,6 +2046,8 @@ if "prediction_mode" not in st.session_state:
     st.session_state.prediction_mode = None
 if "nav_open" not in st.session_state:
     st.session_state.nav_open = False
+
+shared_view, shared_payload = load_shared_result()
 
 def go_prediction_center():
     st.session_state.app_page = "prediction"
@@ -1817,6 +2122,15 @@ else:
             on_click=go_about_model,
             use_container_width=True
         )
+
+if shared_view and shared_payload is not None:
+    st.session_state.app_page = "prediction"
+    st.session_state.prediction_mode = shared_view
+    if shared_view == "single":
+        render_shared_single(shared_payload)
+    else:
+        render_shared_batch(shared_payload)
+    st.stop()
 
 if st.session_state.app_page == "about":
     st.markdown('<div class="section-title">📊 About Model</div>', unsafe_allow_html=True)
@@ -2018,6 +2332,8 @@ if st.session_state.prediction_mode is None:
     )
 
 
+    render_model_online_badge()
+
     st.markdown(
 
         """
@@ -2115,6 +2431,7 @@ if st.session_state.prediction_mode is None:
 
 elif st.session_state.prediction_mode == "single":
 
+    render_model_online_badge()
 
     # =====================================================
     # MOBILE BACK BUTTON
@@ -2997,12 +3314,39 @@ elif st.session_state.prediction_mode == "single":
             "rule-based business explanations and are not direct model-feature explanations."
         )
 
+        # =================================================
+        # SHARE SINGLE RESULT
+        # =================================================
+        single_share_payload = {
+            "churn_probability": float(churn_probability),
+            "risk_level": risk_level,
+            "prediction_text": prediction_text,
+            "retention_priority": retention_priority,
+            "risk_message": risk_message,
+            "reasons": single_reasons,
+            "actions": single_actions,
+        }
+        if st.button("🔗 Share as Link", key="create_single_share", use_container_width=True):
+            st.query_params["share"] = encode_share_payload(single_share_payload)
+            st.query_params["view"] = "single"
+            st.session_state.single_share_ready = True
+            st.rerun()
+
+        if st.session_state.get("single_share_ready") and st.query_params.get("share"):
+            render_copy_link_button(
+                "single",
+                single_share_payload,
+                "single-share"
+            )
+
 
 # =========================================================
 # BATCH PREDICTION MODE
 # =========================================================
 
 elif st.session_state.prediction_mode == "batch":
+
+    render_model_online_badge()
 
     # =====================================================
     # MOBILE BACK BUTTON
@@ -3099,9 +3443,10 @@ elif st.session_state.prediction_mode == "batch":
     # FILE UPLOAD
     # =====================================================
     uploaded_file = st.file_uploader(
-        "Upload customer data",
+        "Upload file",
         type=["csv", "xlsx", "json"],
-        help="Supported input formats: CSV, XLSX, JSON"
+        help="Supported input formats: CSV, XLSX, JSON",
+        label_visibility="collapsed"
     )
 
     if uploaded_file is not None:
@@ -3254,6 +3599,8 @@ elif st.session_state.prediction_mode == "batch":
                 # =================================================
                 # DOWNLOAD RESULTS
                 # =================================================
+                # Keep the original download options. Share as Link is an
+                # additional action displayed directly underneath them.
                 st.markdown("### 📄 Download Results")
 
                 csv_bytes = result_df.to_csv(index=False).encode("utf-8")
@@ -3293,12 +3640,9 @@ elif st.session_state.prediction_mode == "batch":
                         "⬇️ Excel Report",
                         data=excel_bytes,
                         file_name="customer_churn_report.xlsx",
-                        mime=(
-                            "application/vnd.openxmlformats-officedocument."
-                            "spreadsheetml.sheet"
-                        ),
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         use_container_width=True,
-                        key="download_excel_report"
+                        key="download_excel"
                     )
 
                 with d4:
@@ -3308,8 +3652,27 @@ elif st.session_state.prediction_mode == "batch":
                         file_name="customer_churn_report.pdf",
                         mime="application/pdf",
                         use_container_width=True,
-                        key="download_pdf_report"
+                        key="download_pdf"
                     )
+
+                # =================================================
+                # SHARE AS LINK — BELOW DOWNLOADS
+                # =================================================
+                batch_share_payload = {
+                    "result": result_df.to_dict(orient="records")
+                }
+
+                # Store the complete result server-side before rendering the
+                # button, allowing the share URL to remain short.
+                batch_share_id = create_share_id(batch_share_payload)
+
+                render_copy_link_button(
+                    "batch",
+                    batch_share_payload,
+                    "batch-share",
+                    share_id=batch_share_id,
+                    button_label="🔗 Share as Link"
+                )
 
         except Exception as e:
             st.error("❌ Unable to process the uploaded file.")
