@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import joblib
 import pandas as pd
 
@@ -279,25 +280,45 @@ label {
    HAMBURGER NAVIGATION
    ========================================================= */
 
-/* Closed menu: the open button is fixed inside the Streamlit
-   content area, below the top toolbar. */
-.nav-hamburger-wrap {
-    position: fixed !important;
-    top: 218px !important;
-    left: 18px !important;
-    z-index: 4000 !important;
-    width: 52px !important;
-    height: 52px !important;
+/*
+   IMPORTANT:
+   The custom navigation is rendered inside Streamlit's main content
+   DOM. Streamlit can clip children at the main-content boundary.
+   These rules explicitly allow the custom panel/button to extend
+   into the blank top area of the app.
+*/
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"],
+[data-testid="stMainBlockContainer"],
+[data-testid="stMainBlockContainer"] > div {
+    overflow: visible !important;
 }
 
-.nav-hamburger-wrap .stButton,
-.nav-hamburger-wrap .stButton > button {
+/* Closed menu: open button.
+   IMPORTANT: st.markdown() and st.button() are separate Streamlit
+   blocks, so the old .nav-hamburger-wrap could not position the
+   actual button. Target the button's real keyed container instead. */
+.st-key-hamburger_open {
+    position: fixed !important;
+    top: 36px !important;
+    left: 18px !important;
+    width: 52px !important;
+    height: 52px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    z-index: 1000000 !important;
+    overflow: visible !important;
+}
+
+.st-key-hamburger_open > div,
+.st-key-hamburger_open .stButton,
+.st-key-hamburger_open .stButton > button {
     width: 52px !important;
     height: 52px !important;
     min-height: 52px !important;
 }
 
-.nav-hamburger-wrap .stButton > button,
+.st-key-hamburger_open button,
 .st-key-hamburger_close button {
     padding: 0 !important;
     margin: 0 !important;
@@ -311,37 +332,69 @@ label {
     opacity: 1 !important;
 }
 
-/* Open menu. */
+/* Open menu: full-height panel from the top of the app viewport. */
 .st-key-nav_panel {
     position: fixed !important;
-    top: -200px !important;
+    top: 0 !important;
     left: 0 !important;
     bottom: 0 !important;
     width: 290px !important;
-    z-index: 3000 !important;
-    padding: 288px 18px 24px 18px !important;
+    height: 100vh !important;
+    z-index: 999990 !important;
+
+    margin: 0 !important;
+    padding: 86px 18px 24px 18px !important;
+
     background: #111827 !important;
     border-right: 1px solid #374151 !important;
     box-shadow: 10px 0 30px rgba(0,0,0,.25) !important;
-    overflow-y: auto !important;
+
+    /* Do not clip the fixed close button. */
+    overflow: visible !important;
 }
 
-/* CLOSE button is a real Streamlit button inside the panel. */
+/*
+   CLOSE BUTTON:
+   It is independent of the panel's layout and sits above every
+   Streamlit layer. This prevents the top portion from being hidden.
+*/
 .st-key-hamburger_close {
-    position: absolute !important;
-    top: 218px !important;
+    position: fixed !important;
+    top: 18px !important;
     left: 18px !important;
     width: 52px !important;
     height: 52px !important;
-    z-index: 5000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    z-index: 1000000 !important;
+    overflow: visible !important;
+}
+
+.st-key-hamburger_close > div,
+.st-key-hamburger_close .stButton {
+    width: 52px !important;
+    height: 52px !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 .st-key-hamburger_close button {
     width: 52px !important;
     height: 52px !important;
     min-height: 52px !important;
+    margin: 0 !important;
+    padding: 0 !important;
     position: relative !important;
-    z-index: 5001 !important;
+    z-index: 1000001 !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Keep the navigation controls below the hamburger. */
+.st-key-nav_prediction,
+.st-key-nav_about {
+    position: relative !important;
+    z-index: 999995 !important;
 }
 
 .nav-panel-title { font-size: 22px; font-weight: 700; margin: 0 0 18px 8px; }
@@ -1716,28 +1769,16 @@ if not st.session_state.nav_open:
     st.button(
         "☰",
         key="hamburger_open",
-        help="Open navigation",
+        help=None,
         on_click=open_navigation
     )
     st.markdown('</div>', unsafe_allow_html=True)
 
 else:
-    # Shift the application content to the right while the menu is open.
-    # The sidebar remains fixed on the left; the page content moves with it.
+    # Reserve the left side for the open navigation panel.
     st.markdown(
         '''
         <style>
-        /* =====================================================
-           OPEN MENU -> PUSH PAGE CONTENT RIGHT
-           ===================================================== */
-
-        /* IMPORTANT:
-           Do NOT transform the main block. The navigation panel is
-           rendered inside Streamlit's main block, so transforming
-           the whole block also moved the menu to the right.
-
-           Instead, reserve 290px on the LEFT for the menu and let
-           the menu itself stay fixed at x=0. */
         [data-testid="stMainBlockContainer"] {
             margin-left: 290px !important;
             width: calc(100% - 290px) !important;
@@ -1745,34 +1786,21 @@ else:
                         width 0.25s ease-in-out !important;
         }
 
-        /* The remaining page area starts immediately after
-           the 290px navigation panel. */
         [data-testid="stMainBlockContainer"] > div {
             max-width: none !important;
-        }
-
-        /* Keep the actual navigation panel attached to the
-           left edge of the browser viewport. */
-        .st-key-nav_panel {
-            position: fixed !important;
-            left: 0 !important;
-            top: -200px !important;
-            bottom: 0 !important;
-            width: 290px !important;
-            margin: 0 !important;
-            transform: none !important;
+            overflow: visible !important;
         }
         </style>
         ''',
         unsafe_allow_html=True
     )
 
+
     # The CLOSE button is physically INSIDE the open panel.
     with st.container(key="nav_panel"):
         st.button(
             "☰",
             key="hamburger_close",
-            help="Close navigation",
             on_click=close_navigation
         )
 
@@ -1793,23 +1821,179 @@ else:
 if st.session_state.app_page == "about":
     st.markdown('<div class="section-title">📊 About Model</div>', unsafe_allow_html=True)
     st.markdown('<div class="subtitle">Logistic Regression model performance</div>', unsafe_allow_html=True)
-    metrics = [("Accuracy", 80.55), ("ROC-AUC", 84.21), ("Recall", 56.0), ("F1-Score", 60.0)]
-    gauge_html = '<div class="gauge-row">'
-    for label, value in metrics:
-        dash = 251.327 * value / 100.0
-        gauge_html += f"""<div class="gauge-card">
-<div class="gauge-title">{label}</div>
-<svg class="gauge-svg" viewBox="0 0 200 120" aria-label="{label} {value:.2f}%">
-<path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="#374151" stroke-width="14" stroke-linecap="round" pathLength="251.327"/>
-<path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="#60a5fa" stroke-width="14" stroke-linecap="round" pathLength="251.327" stroke-dasharray="{dash:.3f} 251.327"/>
-<text x="20" y="116" fill="#9ca3af" font-size="10">0</text><text x="173" y="116" fill="#9ca3af" font-size="10">100</text>
-</svg>
-<div class="gauge-value">{value:.2f}%</div><div class="gauge-scale">0 — 100%</div></div>"""
-    gauge_html += '</div>'
-    st.markdown(gauge_html, unsafe_allow_html=True)
+
+    # Four SVG speedometers animate clockwise from 0 to the exact
+    # Logistic Regression performance values.
+    gauge_html = r'''<!DOCTYPE html>
+<html>
+<head>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:transparent;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f8fafc}
+.gauges{width:100%;display:grid;grid-template-columns:repeat(4,minmax(220px,1fr));gap:18px;padding:12px 0 18px}
+.gauge-card{min-height:335px;border:1px solid #334155;border-radius:18px;background:#1f2937;display:flex;flex-direction:column;align-items:center;padding:28px 18px 18px;box-shadow:0 8px 20px rgba(0,0,0,.14)}
+.gauge-title{font-size:19px;font-weight:700;margin-bottom:7px;text-align:center}
+.gauge-wrap{width:100%;max-width:330px;height:205px}
+svg{width:100%;height:100%;overflow:visible}
+.gauge-track{fill:none;stroke:#3b4658;stroke-width:22;stroke-linecap:round}
+.gauge-progress{fill:none;stroke:#60a5fa;stroke-width:22;stroke-linecap:round}
+.needle{stroke:#f8fafc;stroke-width:5;stroke-linecap:round}
+.needle-center{fill:#f8fafc}
+.scale-label{fill:#94a3b8;font-size:13px}
+.value{margin-top:-1px;font-size:31px;font-weight:800;letter-spacing:.2px}
+.meaning{color:#94a3b8;font-size:12px;margin-top:8px;text-align:center;line-height:1.35;min-height:34px;max-width:250px}
+@media(max-width:1100px){.gauges{grid-template-columns:repeat(2,minmax(240px,1fr))}}
+@media(max-width:620px){.gauges{grid-template-columns:1fr}.gauge-card{min-height:320px}}
+</style>
+</head>
+<body>
+<div class="gauges">
+    <div class="gauge-card">
+        <div class="gauge-title">Accuracy</div>
+        <div class="gauge-wrap">
+            <svg viewBox="0 0 320 200" aria-label="Accuracy 80.55 percent">
+                <path class="gauge-track" d="M40 160 A120 120 0 0 1 280 160"/>
+                <path id="arc-accuracy" class="gauge-progress" d="M40 160 A120 120 0 0 1 280 160"/>
+                <line id="needle-accuracy" class="needle" x1="160" y1="160" x2="252" y2="160" transform="rotate(180 160 160)"/>
+                <circle class="needle-center" cx="160" cy="160" r="7"/>
+                <text class="scale-label" x="38" y="184">0</text>
+                <text class="scale-label" x="267" y="184">100</text>
+            </svg>
+        </div>
+        <div id="value-accuracy" class="value">0.00%</div>
+        <div class="meaning">Correct predictions out of all predictions</div>
+    </div>
+
+    <div class="gauge-card">
+        <div class="gauge-title">ROC-AUC</div>
+        <div class="gauge-wrap">
+            <svg viewBox="0 0 320 200" aria-label="ROC-AUC 84.21 percent">
+                <path class="gauge-track" d="M40 160 A120 120 0 0 1 280 160"/>
+                <path id="arc-roc" class="gauge-progress" d="M40 160 A120 120 0 0 1 280 160"/>
+                <line id="needle-roc" class="needle" x1="160" y1="160" x2="252" y2="160" transform="rotate(180 160 160)"/>
+                <circle class="needle-center" cx="160" cy="160" r="7"/>
+                <text class="scale-label" x="38" y="184">0</text>
+                <text class="scale-label" x="267" y="184">100</text>
+            </svg>
+        </div>
+        <div id="value-roc" class="value">0.00%</div>
+        <div class="meaning">Ability to distinguish churners from non-churners</div>
+    </div>
+
+    <div class="gauge-card">
+        <div class="gauge-title">Recall</div>
+        <div class="gauge-wrap">
+            <svg viewBox="0 0 320 200" aria-label="Recall 56.0 percent">
+                <path class="gauge-track" d="M40 160 A120 120 0 0 1 280 160"/>
+                <path id="arc-recall" class="gauge-progress" d="M40 160 A120 120 0 0 1 280 160"/>
+                <line id="needle-recall" class="needle" x1="160" y1="160" x2="252" y2="160" transform="rotate(180 160 160)"/>
+                <circle class="needle-center" cx="160" cy="160" r="7"/>
+                <text class="scale-label" x="38" y="184">0</text>
+                <text class="scale-label" x="267" y="184">100</text>
+            </svg>
+        </div>
+        <div id="value-recall" class="value">0.00%</div>
+        <div class="meaning">Churners correctly identified by the model</div>
+    </div>
+
+    <div class="gauge-card">
+        <div class="gauge-title">F1-Score</div>
+        <div class="gauge-wrap">
+            <svg viewBox="0 0 320 200" aria-label="F1-Score 60.0 percent">
+                <path class="gauge-track" d="M40 160 A120 120 0 0 1 280 160"/>
+                <path id="arc-f1" class="gauge-progress" d="M40 160 A120 120 0 0 1 280 160"/>
+                <line id="needle-f1" class="needle" x1="160" y1="160" x2="252" y2="160" transform="rotate(180 160 160)"/>
+                <circle class="needle-center" cx="160" cy="160" r="7"/>
+                <text class="scale-label" x="38" y="184">0</text>
+                <text class="scale-label" x="267" y="184">100</text>
+            </svg>
+        </div>
+        <div id="value-f1" class="value">0.00%</div>
+        <div class="meaning">Balance between precision and recall</div>
+    </div>
+</div>
+
+<script>
+(function(){
+    const gauges=[
+        {key:"accuracy",target:80.55},
+        {key:"roc",target:84.21},
+        {key:"recall",target:56},
+        {key:"f1",target:60}
+    ];
+
+    const arcLength=Math.PI*120;
+    const duration=1800;
+
+    // Every gauge starts at exactly 0%: needle at the far-left end
+    // and progress arc completely hidden.
+    gauges.forEach(g=>{
+        const arc=document.getElementById("arc-"+g.key);
+        const needle=document.getElementById("needle-"+g.key);
+        arc.style.strokeDasharray=arcLength+" "+arcLength;
+        arc.style.strokeDashoffset=arcLength;
+        needle.setAttribute("transform","rotate(180 160 160)");
+    });
+
+    const start=performance.now();
+
+    function ease(t){
+        return 1-Math.pow(1-t,3);
+    }
+
+    function animate(now){
+        const progress=Math.min((now-start)/duration,1);
+        const eased=ease(progress);
+
+        gauges.forEach(g=>{
+            const value=g.target*eased;
+            const angle=180+(value*1.8);
+
+            // IMPORTANT: 180deg = 0%, then the needle moves CLOCKWISE
+            // through the top of the gauge until it reaches the target.
+            document.getElementById("needle-"+g.key)
+                .setAttribute("transform","rotate("+angle+" 160 160)");
+
+            document.getElementById("arc-"+g.key).style.strokeDashoffset=
+                arcLength*(1-value/100);
+
+            document.getElementById("value-"+g.key).textContent=
+                value.toFixed(2)+"%";
+        });
+
+        if(progress<1){
+            requestAnimationFrame(animate);
+        }else{
+            // Force the final frame to the EXACT metric values.
+            gauges.forEach(g=>{
+                const finalAngle=180+(g.target*1.8);
+                document.getElementById("needle-"+g.key)
+                    .setAttribute("transform","rotate("+finalAngle+" 160 160)");
+                document.getElementById("arc-"+g.key).style.strokeDashoffset=
+                    arcLength*(1-g.target/100);
+                document.getElementById("value-"+g.key).textContent=
+                    g.target.toFixed(2)+"%";
+            });
+        }
+    }
+
+    requestAnimationFrame(animate);
+})();
+</script>
+</body>
+</html>'''
+    components.html(gauge_html, height=365, scrolling=False)
+
     st.markdown("### 🏆 Logistic Regression")
-    st.table(pd.DataFrame([{"Model":"🏆 Logistic Regression","Accuracy":"80.55%","ROC-AUC":"84.21%","Recall":"56%","F1-Score":"60%"}]))
+    st.table(pd.DataFrame([{
+        "Model": "🏆 Logistic Regression",
+        "Accuracy": "80.55%",
+        "ROC-AUC": "84.21%",
+        "Recall": "56%",
+        "F1-Score": "60%"
+    }]))
     st.stop()
+
 
 # =========================================================
 # PREDICTION MODE
