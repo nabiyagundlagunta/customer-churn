@@ -3713,7 +3713,7 @@ user_question = st.chat_input(
 # -------------------------------------------------
 # PROCESS QUESTION
 # -------------------------------------------------
-```python
+
 if user_question:
 
     # Display user's question
