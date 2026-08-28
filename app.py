@@ -7,7 +7,7 @@ import json
 import zlib
 import os
 import uuid
-
+from openai import OpenAI
 from io import BytesIO
 
 from reportlab.lib import colors
@@ -3677,3 +3677,81 @@ elif st.session_state.prediction_mode == "batch":
         except Exception as e:
             st.error("❌ Unable to process the uploaded file.")
             st.error(f"Error: {e}")
+            # ==========================================
+# 🤖 AI CUSTOMER CHURN CHATBOT
+# ==========================================
+
+st.markdown("---")
+st.header("🤖 AI Customer Churn Assistant")
+
+st.write(
+    "Ask me anything about customer churn, churn prediction, "
+    "risk levels, risk factors, or customer retention."
+)
+
+# Create chatbot history
+if "chat_messages" not in st.session_state:
+    st.session_state.chat_messages = []
+
+# Display previous messages
+for message in st.session_state.chat_messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# Get user question
+user_question = st.chat_input(
+    "Ask your question here..."
+)
+
+if user_question:
+
+    # Show user's question
+    with st.chat_message("user"):
+        st.markdown(user_question)
+
+    st.session_state.chat_messages.append({
+        "role": "user",
+        "content": user_question
+    })
+
+    try:
+        # Get API key from Streamlit Secrets
+        client = OpenAI(
+            api_key=st.secrets["OPENAI_API_KEY"]
+        )
+
+        # Send question to AI
+        response = client.responses.create(
+            model="gpt-5-mini",
+            instructions="""
+            You are an AI assistant for a Customer Churn Prediction
+            application.
+
+            Explain customer churn, churn prediction, churn probability,
+            risk levels, risk factors, and customer retention strategies.
+
+            Give simple and clear answers suitable for college students.
+
+            If the user asks something unrelated to customer churn,
+            politely explain that you mainly help with the customer churn
+            application.
+            """,
+            input=user_question
+        )
+
+        answer = response.output_text
+
+    except Exception as e:
+        answer = (
+            "⚠️ AI chatbot could not connect. "
+            "Please check the OpenAI API key in Streamlit Secrets."
+        )
+
+    # Display AI answer
+    with st.chat_message("assistant"):
+        st.markdown(answer)
+
+    st.session_state.chat_messages.append({
+        "role": "assistant",
+        "content": answer
+    })
