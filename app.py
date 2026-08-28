@@ -3870,4 +3870,3 @@ If a question is unrelated to customer churn, politely explain that you mainly a
         "role": "assistant",
         "content": answer
     })
-```
