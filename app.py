@@ -3682,6 +3682,7 @@ elif st.session_state.prediction_mode == "batch":
 # ==========================================
 
 st.markdown("---")
+
 st.header("🤖 AI Customer Churn Assistant")
 
 st.write(
@@ -3689,7 +3690,10 @@ st.write(
     "risk levels, risk factors, or customer retention."
 )
 
-# Create chatbot history
+# -------------------------------------------------
+# CHAT HISTORY
+# -------------------------------------------------
+
 if "chat_messages" not in st.session_state:
     st.session_state.chat_messages = []
 
@@ -3698,59 +3702,180 @@ for message in st.session_state.chat_messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Get user question
+# -------------------------------------------------
+# USER QUESTION
+# -------------------------------------------------
+
 user_question = st.chat_input(
     "Ask your question here..."
 )
 
+# -------------------------------------------------
+# PROCESS QUESTION
+# -------------------------------------------------
+
 if user_question:
 
-    # Show user's question
+    # Display user's question
     with st.chat_message("user"):
         st.markdown(user_question)
 
+    # Save user message
     st.session_state.chat_messages.append({
         "role": "user",
         "content": user_question
     })
 
     try:
-        # Get API key from Streamlit Secrets
+        # -------------------------------------------------
+        # CHECK OPENAI SECRET
+        # -------------------------------------------------
+
+        if "OPENAI_API_KEY" not in st.secrets:
+            raise RuntimeError(
+                "OPENAI_API_KEY was not found in Streamlit Secrets."
+            )
+
+        api_key = str(st.secrets["OPENAI_API_KEY"]).strip()
+
+        if not api_key:
+            raise RuntimeError(
+                "OPENAI_API_KEY exists, but the value is empty."
+            )
+
+        # -------------------------------------------------
+        # CREATE OPENAI CLIENT
+        # -------------------------------------------------
+
         client = OpenAI(
-            api_key=st.secrets["OPENAI_API_KEY"]
+            api_key=api_key
         )
 
-        # Send question to AI
+        # -------------------------------------------------
+        # CUSTOMER CHURN ASSISTANT INSTRUCTIONS
+        # -------------------------------------------------
+
+        instructions = """
+You are the AI Customer Churn Assistant inside a Customer Churn
+Prediction application.
+
+Your main topics are:
+- customer churn
+- churn prediction
+- churn probability
+- customer risk levels
+- churn risk factors
+- customer retention
+- retention strategies
+- machine learning for churn prediction
+
+Answer clearly and simply, suitable for college students.
+
+When explaining risk:
+- LOW risk means the customer has relatively low predicted churn risk.
+- MEDIUM risk means the customer needs attention.
+- HIGH risk means the customer should be considered a higher priority
+  for retention.
+
+Give practical and general retention suggestions.
+
+Do not invent customer-specific prediction results.
+If the user wants a prediction for a particular customer, explain that
+the prediction should be obtained from the prediction section of this
+application using the customer's actual input data.
+
+If a question is unrelated to customer churn, politely explain that
+you mainly assist with the customer churn application.
+"""
+
+        # -------------------------------------------------
+        # SEND QUESTION TO OPENAI
+        # -------------------------------------------------
+
         response = client.responses.create(
-            model="gpt-5-mini",
-            instructions="""
-            You are an AI assistant for a Customer Churn Prediction
-            application.
-
-            Explain customer churn, churn prediction, churn probability,
-            risk levels, risk factors, and customer retention strategies.
-
-            Give simple and clear answers suitable for college students.
-
-            If the user asks something unrelated to customer churn,
-            politely explain that you mainly help with the customer churn
-            application.
-            """,
+            model="gpt-5.6-luna",
+            instructions=instructions,
             input=user_question
         )
 
+        # -------------------------------------------------
+        # GET ANSWER
+        # -------------------------------------------------
+
         answer = response.output_text
 
-    except Exception as e:
-        answer = (
-            "⚠️ AI chatbot could not connect. "
-            "Please check the OpenAI API key in Streamlit Secrets."
-        )
+        if not answer or not answer.strip():
+            answer = (
+                "I could not generate an answer. "
+                "Please try asking your question again."
+            )
 
-    # Display AI answer
+    except Exception as e:
+
+        # -------------------------------------------------
+        # SHOW A USEFUL ERROR
+        # -------------------------------------------------
+
+        error_text = str(e)
+
+        if "OPENAI_API_KEY was not found" in error_text:
+            answer = (
+                "⚠️ OpenAI API key is missing.
+
+"
+                "Go to **Manage app → Settings → Secrets** and add:
+
+"
+                "```toml
+"
+                'OPENAI_API_KEY = "your_api_key_here"
+'
+                "```"
+            )
+
+        elif "OPENAI_API_KEY exists, but the value is empty" in error_text:
+            answer = (
+                "⚠️ Your `OPENAI_API_KEY` secret is empty. "
+                "Please add the actual API key in Streamlit Secrets."
+            )
+
+        elif "401" in error_text or "invalid_api_key" in error_text.lower():
+            answer = (
+                "⚠️ The OpenAI API key was rejected. "
+                "Please check that the key saved in Streamlit Secrets "
+                "is correct."
+            )
+
+        elif "429" in error_text:
+            answer = (
+                "⚠️ The OpenAI API request was limited. "
+                "Please check your API account usage and try again later."
+            )
+
+        elif "model" in error_text.lower():
+            answer = (
+                "⚠️ There is a problem with the OpenAI model configuration.
+
+"
+                f"Technical error: `{error_text}`"
+            )
+
+        else:
+            answer = (
+                "⚠️ AI chatbot could not connect.
+
+"
+                f"Technical error: `{error_text}`"
+            )
+
+    # -------------------------------------------------
+    # DISPLAY AI ANSWER
+    # -------------------------------------------------
+
     with st.chat_message("assistant"):
         st.markdown(answer)
 
+    # Save AI response
     st.session_state.chat_messages.append({
         "role": "assistant",
         "content": answer
