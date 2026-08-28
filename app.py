@@ -3817,13 +3817,205 @@ you mainly assist with the customer churn application.
         # -------------------------------------------------
 
         error_text = str(e)
-    answer = "⚠️ AI chatbot error: " + error_text
+   
+      # ==========================================
+# 🤖 FREE CUSTOMER CHURN CHATBOT
+# ==========================================
 
+st.markdown("---")
+
+st.header("🤖 Customer Churn Assistant")
+
+st.write(
+    "Ask questions about customer churn, risk factors, "
+    "prediction, and retention."
+)
+
+# Chat history
+if "chat_messages" not in st.session_state:
+    st.session_state.chat_messages = []
+
+# Display previous messages
+for message in st.session_state.chat_messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+
+def chatbot_answer(question):
+
+    q = question.lower().strip()
+
+    if "what is churn" in q or "customer churn" in q:
+
+        return """
+### 📌 What is Customer Churn?
+
+Customer churn means a customer stops using a company's product or service.
+
+For example, if a customer cancels their internet subscription, that customer has churned.
+
+A churn prediction system uses customer information to estimate whether a customer is likely to leave.
+"""
+
+    elif "factor" in q or "cause" in q or "reason" in q:
+
+        return """
+### 📊 Common Churn Factors
+
+Some common factors that can increase churn risk are:
+
+- Short contract duration
+- High monthly charges
+- Low customer tenure
+- Poor customer service
+- Lack of technical support
+- Lack of online security
+- Frequent service problems
+- Payment-related issues
+
+The important factors can vary depending on the dataset and machine-learning model.
+"""
+
+    elif "risk" in q:
+
+        return """
+### 🚦 Churn Risk Levels
+
+**🟢 Low Risk**  
+The customer has a relatively low predicted probability of leaving.
+
+**🟡 Medium Risk**  
+The customer may need attention and better engagement.
+
+**🔴 High Risk**  
+The customer has a relatively high predicted probability of leaving and may need retention efforts.
+"""
+
+    elif "retention" in q or "retain" in q:
+
+        return """
+### 💡 Customer Retention Strategies
+
+Companies can reduce churn by:
+
+1. Improving customer support
+2. Offering suitable plans
+3. Providing loyalty benefits
+4. Resolving complaints quickly
+5. Monitoring high-risk customers
+6. Improving service quality
+7. Providing personalized offers
+"""
+
+    elif "prediction" in q or "predict" in q:
+
+        return """
+### 🔮 Churn Prediction
+
+Machine-learning models use customer information such as:
+
+- Tenure
+- Monthly charges
+- Contract type
+- Internet service
+- Payment method
+- Customer services
+
+The model predicts whether a customer is likely to churn.
+"""
+
+    elif "machine learning" in q or "model" in q:
+
+        return """
+### 🤖 Machine Learning and Churn
+
+A machine-learning model learns patterns from historical customer data.
+
+The trained model can then predict churn for new customers.
+
+Common models include:
+
+- Logistic Regression
+- Decision Tree
+- Random Forest
+- XGBoost
+- Support Vector Machine
+"""
+
+    elif "hello" in q or "hi" in q or "hey" in q:
+
+        return """
+### 👋 Hello!
+
+I'm your Customer Churn Assistant.
+
+You can ask me:
+
+- What is customer churn?
+- What factors cause churn?
+- What is churn risk?
+- How can companies retain customers?
+- How does churn prediction work?
+"""
+
+    elif "help" in q:
+
+        return """
+### 💬 You can ask me about:
+
+- Customer churn
+- Churn factors
+- Churn prediction
+- Risk levels
+- Machine learning
+- Customer retention
+"""
+
+    else:
+
+        return """
+### 🤔 I can help with Customer Churn.
+
+Try asking:
+
+**"What is customer churn?"**
+
+**"What factors cause churn?"**
+
+**"What is churn risk?"**
+
+**"How can companies retain customers?"**
+
+**"How does churn prediction work?"**
+"""
+
+
+# User input
+user_question = st.chat_input(
+    "Ask your question here..."
+)
+
+if user_question:
+
+    # Display user question
+    with st.chat_message("user"):
+        st.markdown(user_question)
+
+    # Save user message
+    st.session_state.chat_messages.append({
+        "role": "user",
+        "content": user_question
+    })
+
+    # Generate answer
+    answer = chatbot_answer(user_question)
+
+    # Display answer
     with st.chat_message("assistant"):
         st.markdown(answer)
 
+    # Save answer
     st.session_state.chat_messages.append({
         "role": "assistant",
         "content": answer
     })
-      
