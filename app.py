@@ -3817,66 +3817,13 @@ you mainly assist with the customer churn application.
         # -------------------------------------------------
 
         error_text = str(e)
-
-        if "OPENAI_API_KEY was not found" in error_text:
-            answer = (
-                "⚠️ OpenAI API key is missing.
-
-"
-                "Go to **Manage app → Settings → Secrets** and add:
-
-"
-                "```toml
-"
-                'OPENAI_API_KEY = "your_api_key_here"
-'
-                "```"
-            )
-
-        elif "OPENAI_API_KEY exists, but the value is empty" in error_text:
-            answer = (
-                "⚠️ Your `OPENAI_API_KEY` secret is empty. "
-                "Please add the actual API key in Streamlit Secrets."
-            )
-
-        elif "401" in error_text or "invalid_api_key" in error_text.lower():
-            answer = (
-                "⚠️ The OpenAI API key was rejected. "
-                "Please check that the key saved in Streamlit Secrets "
-                "is correct."
-            )
-
-        elif "429" in error_text:
-            answer = (
-                "⚠️ The OpenAI API request was limited. "
-                "Please check your API account usage and try again later."
-            )
-
-        elif "model" in error_text.lower():
-            answer = (
-                "⚠️ There is a problem with the OpenAI model configuration.
-
-"
-                f"Technical error: `{error_text}`"
-            )
-
-        else:
-            answer = (
-                "⚠️ AI chatbot could not connect.
-
-"
-                f"Technical error: `{error_text}`"
-            )
-
-    # -------------------------------------------------
-    # DISPLAY AI ANSWER
-    # -------------------------------------------------
+    answer = "⚠️ AI chatbot error: " + error_text
 
     with st.chat_message("assistant"):
         st.markdown(answer)
 
-    # Save AI response
     st.session_state.chat_messages.append({
         "role": "assistant",
         "content": answer
     })
+      
