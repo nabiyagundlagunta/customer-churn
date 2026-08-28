@@ -3713,7 +3713,7 @@ user_question = st.chat_input(
 # -------------------------------------------------
 # PROCESS QUESTION
 # -------------------------------------------------
-
+```python
 if user_question:
 
     # Display user's question
@@ -3727,6 +3727,7 @@ if user_question:
     })
 
     try:
+
         # -------------------------------------------------
         # CHECK OPENAI SECRET
         # -------------------------------------------------
@@ -3756,8 +3757,7 @@ if user_question:
         # -------------------------------------------------
 
         instructions = """
-You are the AI Customer Churn Assistant inside a Customer Churn
-Prediction application.
+You are the AI Customer Churn Assistant inside a Customer Churn Prediction application.
 
 Your main topics are:
 - customer churn
@@ -3774,18 +3774,15 @@ Answer clearly and simply, suitable for college students.
 When explaining risk:
 - LOW risk means the customer has relatively low predicted churn risk.
 - MEDIUM risk means the customer needs attention.
-- HIGH risk means the customer should be considered a higher priority
-  for retention.
+- HIGH risk means the customer should be considered a higher priority for retention.
 
 Give practical and general retention suggestions.
 
 Do not invent customer-specific prediction results.
-If the user wants a prediction for a particular customer, explain that
-the prediction should be obtained from the prediction section of this
-application using the customer's actual input data.
 
-If a question is unrelated to customer churn, politely explain that
-you mainly assist with the customer churn application.
+If the user wants a prediction for a particular customer, explain that the prediction should be obtained from the prediction section of this application using the customer's actual input data.
+
+If a question is unrelated to customer churn, politely explain that you mainly assist with the customer churn application.
 """
 
         # -------------------------------------------------
@@ -3810,7 +3807,6 @@ you mainly assist with the customer churn application.
                 "Please try asking your question again."
             )
 
-  ````python
     except Exception as e:
 
         # -------------------------------------------------
@@ -3820,39 +3816,43 @@ you mainly assist with the customer churn application.
         error_text = str(e)
 
         if "OPENAI_API_KEY was not found" in error_text:
+
             answer = (
                 "⚠️ OpenAI API key is missing.\n\n"
-                "Go to **Manage app → Settings → Secrets** and add:\n\n"
-                "```toml\n"
-                'OPENAI_API_KEY = "your_api_key_here"\n'
-                "```"
+                "Go to **Manage app → Settings → Secrets** "
+                "and add your API key."
             )
 
         elif "OPENAI_API_KEY exists, but the value is empty" in error_text:
+
             answer = (
                 "⚠️ Your `OPENAI_API_KEY` secret is empty. "
                 "Please add the actual API key in Streamlit Secrets."
             )
 
         elif "401" in error_text or "invalid_api_key" in error_text.lower():
+
             answer = (
                 "⚠️ The OpenAI API key was rejected. "
-                "Please check that the key saved in Streamlit Secrets is correct."
+                "Please check your API key in Streamlit Secrets."
             )
 
         elif "429" in error_text:
+
             answer = (
                 "⚠️ The OpenAI API request was limited. "
                 "Please check your API account usage and try again later."
             )
 
         elif "model" in error_text.lower():
+
             answer = (
                 "⚠️ There is a problem with the OpenAI model configuration.\n\n"
                 f"Technical error: `{error_text}`"
             )
 
         else:
+
             answer = (
                 "⚠️ AI chatbot could not connect.\n\n"
                 f"Technical error: `{error_text}`"
@@ -3870,4 +3870,4 @@ you mainly assist with the customer churn application.
         "role": "assistant",
         "content": answer
     })
-````
+```
