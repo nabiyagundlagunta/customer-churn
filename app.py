@@ -3810,6 +3810,7 @@ you mainly assist with the customer churn application.
                 "Please try asking your question again."
             )
 
+  ````python
     except Exception as e:
 
         # -------------------------------------------------
@@ -3820,16 +3821,10 @@ you mainly assist with the customer churn application.
 
         if "OPENAI_API_KEY was not found" in error_text:
             answer = (
-                "⚠️ OpenAI API key is missing.
-
-"
-                "Go to **Manage app → Settings → Secrets** and add:
-
-"
-                "```toml
-"
-                'OPENAI_API_KEY = "your_api_key_here"
-'
+                "⚠️ OpenAI API key is missing.\n\n"
+                "Go to **Manage app → Settings → Secrets** and add:\n\n"
+                "```toml\n"
+                'OPENAI_API_KEY = "your_api_key_here"\n'
                 "```"
             )
 
@@ -3842,8 +3837,7 @@ you mainly assist with the customer churn application.
         elif "401" in error_text or "invalid_api_key" in error_text.lower():
             answer = (
                 "⚠️ The OpenAI API key was rejected. "
-                "Please check that the key saved in Streamlit Secrets "
-                "is correct."
+                "Please check that the key saved in Streamlit Secrets is correct."
             )
 
         elif "429" in error_text:
@@ -3854,17 +3848,13 @@ you mainly assist with the customer churn application.
 
         elif "model" in error_text.lower():
             answer = (
-                "⚠️ There is a problem with the OpenAI model configuration.
-
-"
+                "⚠️ There is a problem with the OpenAI model configuration.\n\n"
                 f"Technical error: `{error_text}`"
             )
 
         else:
             answer = (
-                "⚠️ AI chatbot could not connect.
-
-"
+                "⚠️ AI chatbot could not connect.\n\n"
                 f"Technical error: `{error_text}`"
             )
 
@@ -3880,3 +3870,4 @@ you mainly assist with the customer churn application.
         "role": "assistant",
         "content": answer
     })
+````
