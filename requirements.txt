@@ -1,8 +1,7 @@
 streamlit
 pandas
-openpyxl
+numpy
+scikit-learn
 joblib
 reportlab
-scikit-learn==1.6.1
-streamlit>=1.30.0
-openai
+openpyxl
