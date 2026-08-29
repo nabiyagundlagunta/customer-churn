@@ -788,27 +788,33 @@ FIELD_HELP = {
 # =========================================================
 
 @st.cache_resource(show_spinner=False)
+
 def load_model():
 
-    model_data = joblib.load(
-        MODEL_FILE
-    )
+    try:
+        model_data = joblib.load(MODEL_FILE)
 
-    preprocessor = model_data[
-        "preprocessor"
-    ]
+        st.success("✅ Model file loaded successfully!")
 
-    model = model_data[
-        "model"
-    ]
+        if isinstance(model_data, dict):
+            st.write("Model file contains:", list(model_data.keys()))
 
-    return preprocessor, model
+            preprocessor = model_data["preprocessor"]
+            model = model_data["model"]
 
+            return preprocessor, model
 
-# =========================================================
+        else:
+            st.warning("⚠️ Model file is not a dictionary.")
+            return None, model_data
+
+    except Exception as e:
+        st.error("❌ Model loading failed!")
+        st.error(str(e))
+        return None, None
+     # =========================================================
 # MODEL LOADING
 # =========================================================
-
 try:
 
     with st.spinner("Please wait..."):
